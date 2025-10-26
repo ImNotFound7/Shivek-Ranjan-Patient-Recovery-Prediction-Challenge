@@ -22,7 +22,6 @@ np.random.seed(RANDOM_STATE)
 #=============================================================================
 
 def convert_binary_columns(df):
-    """Convert binary text values to 0/1"""
     df_converted = df.copy()
     conversions_made = {}
 
@@ -62,7 +61,6 @@ def convert_binary_columns(df):
 
 
 def smart_data_preparation(df, target_col=None):
-    """Smart data preparation with binary conversion"""
     df_clean = df.copy()
 
     if target_col and target_col in df.columns:
@@ -77,7 +75,6 @@ def smart_data_preparation(df, target_col=None):
     print(f"\nInitial features: {list(df_clean.columns)}")
     print(f"Initial shape: {df_clean.shape}")
 
-    print("\nStep 1: Converting binary text columns...")
     df_clean, conversions = convert_binary_columns(df_clean)
 
     if conversions:
@@ -86,14 +83,12 @@ def smart_data_preparation(df, target_col=None):
     else:
         print("  No binary text columns found")
 
-    print("\nStep 2: Converting to numeric types...")
     numeric_features = []
     categorical_features = []
 
     for col in df_clean.columns:
         if df_clean[col].dtype in ['int64', 'float64']:
             numeric_features.append(col)
-            print(f"  ✓ {col}: Already numeric")
         else:
             converted = pd.to_numeric(df_clean[col], errors='coerce')
             non_null_ratio = converted.notna().sum() / len(df_clean)
@@ -113,7 +108,6 @@ def smart_data_preparation(df, target_col=None):
                 else:
                     print(f"  ✗ {col}: Cannot use (all missing or too many categories)")
 
-    print("\nStep 3: Handling missing values...")
     for col in numeric_features:
         missing_count = df_clean[col].isna().sum()
         if missing_count > 0:
@@ -140,7 +134,6 @@ def smart_data_preparation(df, target_col=None):
 
 
 def create_engineered_features(df, numeric_features):
-    """Create interaction and polynomial features"""
     df_new = df.copy()
     valid_numeric = [f for f in numeric_features if f in df.columns]
 
@@ -185,7 +178,6 @@ def create_engineered_features(df, numeric_features):
 #=============================================================================
 
 def create_preprocessing_pipeline(numeric_features, categorical_features):
-    """Create preprocessing pipeline"""
     transformers = []
 
     if len(numeric_features) > 0:
@@ -200,9 +192,7 @@ def create_preprocessing_pipeline(numeric_features, categorical_features):
 
 
 def get_models():
-    """
-    Model configurations WITH POLYNOMIAL LINEAR REGRESSION TUNING!
-    """
+
     return {
         'Linear Regression (degree=1)': {
             'model': LinearRegression(),
@@ -281,7 +271,6 @@ def get_models():
 
 
 def train_model(X, y, name, config, numeric_features, categorical_features, cv=5):
-    """Train a single model with optional polynomial features"""
 
     # Check if polynomial features should be added
     use_poly = config.get('use_poly', False)
@@ -337,7 +326,6 @@ def train_model(X, y, name, config, numeric_features, categorical_features, cv=5
 
 
 def train_all_models(X, y, numeric_features, categorical_features, cv=5):
-    """Train all models"""
     models = get_models()
     results = []
 
@@ -352,15 +340,14 @@ def train_all_models(X, y, numeric_features, categorical_features, cv=5):
         try:
             result = train_model(X, y, name, config, numeric_features, categorical_features, cv)
             results.append(result)
-            print(f" ✓ CV RMSE: {result['cv_rmse']:.4f}")
+            print(f"  CV RMSE: {result['cv_rmse']:.4f}")
         except Exception as e:
-            print(f" ✗ Error: {str(e)}")
+            print(f"  Error: {str(e)}")
 
     return results
 
 
 def create_ensemble(X, y, results, numeric_features, categorical_features, cv=5):
-    """Create stacking ensemble"""
     if len(results) < 3:
         return None
 
@@ -399,7 +386,6 @@ def create_ensemble(X, y, results, numeric_features, categorical_features, cv=5)
 
 def run_pipeline_all_models(train_path, test_path=None, output_folder='predictions_all_models',
                             engineer_features=True, use_ensemble=True):
-    """Run complete pipeline and generate separate predictions for EACH model"""
     import os
 
     # Create output folder if it doesn't exist
@@ -475,27 +461,22 @@ def run_pipeline_all_models(train_path, test_path=None, output_folder='predictio
         print("GENERATING SEPARATE PREDICTIONS FOR EACH MODEL")
         print("=" * 80)
 
-        # Generate predictions for EACH model
         all_predictions = {}
 
         for i, result in enumerate(results, 1):
             model_name = result['name']
             model = result['model']
 
-            # Create safe filename (remove special characters)
             safe_name = model_name.replace(' ', '_').replace('(', '').replace(')', '').replace('=', '')
             filename = f"{output_folder}/{safe_name}.csv"
 
             print(f"\n{i}/{len(results)} Generating predictions for: {model_name}...", end='', flush=True)
 
             try:
-                # Make predictions
                 predictions = model.predict(X_test)
 
-                # Store predictions
                 all_predictions[model_name] = predictions
 
-                # Save to CSV
                 submission = pd.DataFrame({
                     'Id': test_ids if test_ids is not None else range(len(predictions)),
                     'Recovery Index': predictions
@@ -509,7 +490,6 @@ def run_pipeline_all_models(train_path, test_path=None, output_folder='predictio
             except Exception as e:
                 print(f" ✗ Error: {str(e)}")
 
-        # BONUS: Create averaged predictions from top 3 models
         print("\n" + "=" * 80)
         print("BONUS: Creating Averaged Prediction from Top 3 Models")
         print("=" * 80)
@@ -534,7 +514,6 @@ def run_pipeline_all_models(train_path, test_path=None, output_folder='predictio
             print(f"\n✓ Saved averaged predictions: {avg_filename}")
             print(f"  Mean={averaged_preds.mean():.2f}, Std={averaged_preds.std():.2f}")
 
-        # Summary
         print("\n" + "=" * 80)
         print("SUMMARY")
         print("=" * 80)
@@ -563,7 +542,6 @@ def run_pipeline_all_models(train_path, test_path=None, output_folder='predictio
     return results_df, results
 
 
-# Example usage:
 if __name__ == "__main__":
     TRAIN_PATH = 'train.csv'
     TEST_PATH = 'test.csv'
